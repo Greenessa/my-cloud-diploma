@@ -1,30 +1,40 @@
 # Модели данных
 
+
 ## User
 
-| Поле | Тип | Ограничения |
+| Поле | Тип | Ограничения и примечания |
 |---|---|---|
-| id | AutoField | Primary Key идентификатор строки таблицы
-|username|Charfield(20)| уникальный, [a-zA-Z][a-zA-Z0-9]{3,19} |
-|full_name|CharField(255) | обязательное |
-|email|EmailField | уникальный, валидный |
-|password|CharField(128)|хэш пароля На входе валидируется: ≥6 симв., 1 заглавная, 1 цифра, 1 спецсимвол |
-|is_admin|BooleanField| по умолчанию False |
-|storage_path| CharField(255) | относительный путь к папке пользователя |
+| id | AutoField | Primary Key идентификатор строки таблицы |
+| username | CharField(20) | уникальный, [a-zA-Z][a-zA-Z0-9]{3,19} |
+| full_name | CharField(255) | обязательное |
+| email | EmailField | уникальный, валидный |
+| password | CharField(128) | хэш пароля. На входе валидируется: ≥6 симв., 1 заглавная, 1 цифра, 1 спецсимвол |
+| is_admin | BooleanField | **Признак администратора по ТЗ.** Даёт право управлять пользователями и чужими хранилищами через API. По умолчанию False |
+| is_staff | BooleanField | **Служебный флаг Django.** Даёт доступ только во встроенную админку Django (/admin/). Не используется для бизнес-логики. По умолчанию False |
+| is_superuser | BooleanField | **Служебный флаг Django.** Даёт все права в Django (включая админку). По умолчанию False |
+| storage_path | CharField(255) | уникальный, относительный путь к папке пользователя |
+
+> **Важное различие:**
+> - `is_admin` — это бизнес-роль в нашем приложении (My Cloud). Все проверки доступа в API (`/api/users/`, `?owner={id}`) строятся на этом флаге.
+> - `is_staff` и `is_superuser` — это внутренние флаги Django. Они нужны только для того, чтобы разработчик мог зайти в `/admin/` и редактировать данные. Обычный пользователь (даже если он `is_admin=True`) не обязан иметь `is_staff=True`, если мы не хотим пускать его в админку Django.
 
 ## File
 | Поле | Тип | Описание |
 |---|---|---|
 | id | AutoField | Primary Key идентификатор строки таблицы
 | owner | ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) | владелец файла |
-|file_name|CharField(255)| как загрузил пользователь |
-|stored_name| CharField(64) | сгенерированное UUID-имя файла на диске |
+| file_name | CharField(255) | Оригинальное имя файла. Используется только для отображения и скачивания. **Никогда не используется для путей на диске.** |
+| stored_name | CharField(64) | Имя на диске (UUID4 hex + расширение). Генерируется сервером. **Никогда не берется из ввода пользователя (защита от path traversal).** |
 | size | BigIntegerField | размер в байтах |
 | uploaded_at | DateTimeField | дата загрузки файла |
 | last_downloaded_at | DateTimeField | дата последнего скачивания, может быть пустым null=True |
 | comment |TextField(blank=True)| комментарий к файлу (blank=True может быть пустой) |
-| file_path * | CharField(512) | относительный путь к файлу |
-| share_token | UUIDField(unique=True) | уникальный, для публичной ссылки |
+| file_path | CharField(512) | Относительный путь внутри `CLOUD_STORAGE_DIR`. Формируется как `f"{owner.storage_path}{stored_name}"`. | share_token | UUIDField(unique=True) | уникальный, для публичной ссылки |
 
 * Примечание: file_path строится как f"{user.storage_path}/{stored_name}",
 например: "user_5/a1b2c3d4-....bin"
+> **Безопасность путей (Path Traversal):**
+> Пользователь передаёт только `file_name` (оригинальное имя). Оно сохраняется в БД для отображения, но **никогда** не участвует в формировании пути на диске. 
+> Путь на диске (`file_path`) формируется из `storage_path` пользователя (генерируется через UUID при создании) и `stored_name` (генерируется через UUID при загрузке). 
+> Так как оба компонента — это UUID, злоумышленник не может передать `../../etc/passwd` или подобное, чтобы вырваться за пределы папки хранилища.

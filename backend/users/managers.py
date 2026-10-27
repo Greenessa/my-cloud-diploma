@@ -1,5 +1,5 @@
 from django.contrib.auth.base_user import BaseUserManager
-
+from django.contrib.auth.password_validation import validate_password
 
 class UserManager(BaseUserManager):
     """
@@ -9,14 +9,27 @@ class UserManager(BaseUserManager):
 
     use_in_migrations = True
 
+    
     def _create_user(self, username, email, password, **extra_fields):
         if not username:
             raise ValueError("Логин обязателен")
         if not email:
             raise ValueError("Email обязателен")
         email = self.normalize_email(email)
+        
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
+        
+        # ВЫЗЫВАЕМ ВАЛИДАЦИЮ МОДЕЛИ
+        # Если логин не пройдет проверку (например, начинается с цифры),
+        # Django выбросит исключение ValidationError и в базу ничего не попадет.
+        user.full_clean()
+
+        # ПРОВЕРКА ПАРОЛЯ
+        # Вызываем встроенную функцию Django, которая прогоняет пароль 
+        # через все валидаторы из AUTH_PASSWORD_VALIDATORS (включая наш кастомный)
+        validate_password(password)
+        
         user.save(using=self._db)
         return user
 

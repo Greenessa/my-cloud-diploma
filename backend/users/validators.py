@@ -23,8 +23,6 @@ def validate_password_strength(value):
         raise ValidationError("Пароль должен содержать хотя бы одну цифру.")
     if not re.search(r"[^A-Za-z0-9]", value):
         raise ValidationError("Пароль должен содержать хотя бы один специальный символ.")
-    
-    from django.core.exceptions import ValidationError
 
 
 class PasswordStrengthValidator:

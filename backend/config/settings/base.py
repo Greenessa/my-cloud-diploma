@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "users",
     "storage.apps.StorageConfig",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [

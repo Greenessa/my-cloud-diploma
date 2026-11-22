@@ -12,6 +12,8 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# Доверяем заголовку X-Forwarded-Host от прокси (Nginx)
+USE_X_FORWARDED_HOST = True
 
 # Настройки CORS и CSRF для продакшена
 # Читаем адреса из переменных окружения. Если не заданы — по умолчанию пустой список.

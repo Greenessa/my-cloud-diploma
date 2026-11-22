@@ -1,7 +1,5 @@
-import os
 import logging
-from django.conf import settings
-from django.http import FileResponse
+from storage.services import get_file_response
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -9,7 +7,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.permissions import IsAdmin
 from .models import File
 from .permissions import IsOwnerOrAdmin
 from .serializers import (
@@ -39,13 +36,20 @@ class FileListCreateView(APIView):
                     {"error": "Только администратор может смотреть чужие файлы."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-            files = File.objects.filter(owner_id=owner_id)
+            try:
+                owner_id_int = int(owner_id)
+            except ValueError:
+                return Response(
+                    {"error": "Параметр owner должен быть числом."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            files = File.objects.filter(owner_id=owner_id_int)
             logger.info(f"Админ {request.user.username} смотрит файлы пользователя {owner_id}")
         else:
             files = File.objects.filter(owner=request.user)
             logger.debug(f"Пользователь {request.user.username} запросил список своих файлов")
             
-        serializer = FileSerializer(files, many=True)
+        serializer = FileSerializer(files, many=True, context={"request": request})
         return Response(serializer.data)
 
     def post(self, request):
@@ -67,7 +71,7 @@ class FileListCreateView(APIView):
         )
         
         logger.info(f"Пользователь {request.user.username} загрузил файл {file_obj.file_name}")
-        return Response(FileSerializer(file_obj).data, status=status.HTTP_201_CREATED)
+        return Response(FileSerializer(file_obj, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
 class FileDetailView(APIView):
@@ -84,7 +88,7 @@ class FileDetailView(APIView):
     def get(self, request, pk):
         file_obj = self.get_object(pk)
         self.check_object_permissions(request, file_obj)
-        return Response(FileSerializer(file_obj).data)
+        return Response(FileSerializer(file_obj, context={"request": request}).data)
 
     def patch(self, request, pk):
         file_obj = self.get_object(pk)
@@ -95,7 +99,7 @@ class FileDetailView(APIView):
         serializer.save()
         
         logger.info(f"Пользователь {request.user.username} изменил файл {file_obj.id}")
-        return Response(FileSerializer(file_obj).data)
+        return Response(FileSerializer(file_obj, context={"request": request}).data)
 
     def delete(self, request, pk):
         file_obj = self.get_object(pk)
@@ -109,31 +113,17 @@ class FileDetailView(APIView):
 
 
 class FileDownloadView(APIView):
-    """
-    GET: скачивание файла с проверкой прав.
-    """
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
     def get(self, request, pk):
         file_obj = get_object_or_404(File, pk=pk)
         self.check_object_permissions(request, file_obj)
         
-        full_path = os.path.join(settings.CLOUD_STORAGE_DIR, file_obj.file_path)
-        
-        if not os.path.exists(full_path):
-            logger.error(f"Файл не найден на диске: {full_path}")
+        response = get_file_response(file_obj)
+        if response is None:
             return Response({"error": "Файл не найден на диске"}, status=status.HTTP_404_NOT_FOUND)
-            
-        # Обновляем дату последнего скачивания
-        from django.utils import timezone
-        file_obj.last_downloaded_at = timezone.now()
-        file_obj.save(update_fields=["last_downloaded_at"])
         
         logger.info(f"Пользователь {request.user.username} скачал файл {file_obj.file_name}")
-        
-        # Отдаём файл с оригинальным именем
-        response = FileResponse(open(full_path, "rb"), as_attachment=True)
-        response["Content-Disposition"] = f'attachment; filename="{file_obj.file_name}"'
         return response
 
 
@@ -153,25 +143,14 @@ class FileShareView(APIView):
 
 
 class PublicDownloadView(APIView):
-    """
-    GET: скачивание по публичной ссылке (без авторизации).
-    """
     permission_classes = [AllowAny]
 
     def get(self, request, token):
         file_obj = get_object_or_404(File, share_token=token)
         
-        full_path = os.path.join(settings.CLOUD_STORAGE_DIR, file_obj.file_path)
-        
-        if not os.path.exists(full_path):
+        response = get_file_response(file_obj)
+        if response is None:
             return Response({"error": "Файл не найден"}, status=status.HTTP_404_NOT_FOUND)
-            
-        from django.utils import timezone
-        file_obj.last_downloaded_at = timezone.now()
-        file_obj.save(update_fields=["last_downloaded_at"])
         
         logger.info(f"Публичное скачивание файла {file_obj.file_name}")
-        
-        response = FileResponse(open(full_path, "rb"), as_attachment=True)
-        response["Content-Disposition"] = f'attachment; filename="{file_obj.file_name}"'
         return response

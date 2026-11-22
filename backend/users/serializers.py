@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-
+from django.db.models import Sum
 from .models import User
 from .validators import validate_password_strength, validate_username
 
@@ -83,4 +83,39 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Пользователь заблокирован.")
         attrs["user"] = user
         return attrs
+    
+class AdminUserSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для админского списка пользователей.
+    Показывает информацию о хранилище (кол-во файлов и размер).
+    """
+    files_count = serializers.IntegerField(source="files.count", read_only=True)
+    files_size = serializers.SerializerMethodField()
 
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "full_name",
+            "email",
+            "is_admin",
+            "storage_path",
+            "files_count",
+            "files_size",
+        ]
+
+    def get_files_size(self, obj):
+        # Суммируем размер всех файлов пользователя
+        total = obj.files.aggregate(total=Sum("size"))["total"]
+        return total or 0
+
+
+class AdminUserUpdateSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для изменения пользователя админом.
+    Разрешено менять только is_admin (и при необходимости другие поля).
+    """
+    class Meta:
+        model = User
+        fields = ["is_admin"]

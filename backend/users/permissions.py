@@ -9,3 +9,10 @@ class IsAdmin(BasePermission):
             and request.user.is_authenticated 
             and request.user.is_admin
         )
+    
+class IsAdminOrSelf(BasePermission):
+    """Разрешает доступ админу или самому пользователю."""
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_admin:
+            return True
+        return obj == request.user

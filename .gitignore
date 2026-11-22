@@ -20,4 +20,10 @@ backend/static/
 .DS_Store
 Thumbs.db
 
-backend/logs/
+# Логи
+backend/logs/*
+!backend/logs/.gitkeep
+
+backend/staticfiles/
+
+backend/storage/user_*

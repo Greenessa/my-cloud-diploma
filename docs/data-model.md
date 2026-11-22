@@ -22,14 +22,14 @@
 ## File
 | Поле | Тип | Описание |
 |---|---|---|
-| id | AutoField | Primary Key идентификатор строки таблицы
+| id | AutoField | Primary Key идентификатор строки таблицы |
 | owner | ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) | владелец файла |
 | file_name | CharField(255) | Оригинальное имя файла. Используется только для отображения и скачивания. **Никогда не используется для путей на диске.** |
 | stored_name | CharField(64) | Имя на диске (UUID4 hex + расширение). Генерируется сервером. **Никогда не берется из ввода пользователя (защита от path traversal).** |
 | size | BigIntegerField | размер в байтах |
 | uploaded_at | DateTimeField | дата загрузки файла |
 | last_downloaded_at | DateTimeField | дата последнего скачивания, может быть пустым null=True |
-| comment |TextField(blank=True)| комментарий к файлу (blank=True может быть пустой) |
+| comment | TextField(blank=True) | комментарий к файлу (blank=True может быть пустой) |
 | file_path | CharField(512) | Относительный путь внутри `CLOUD_STORAGE_DIR`. Формируется как `f"{owner.storage_path}{stored_name}"`. | share_token | UUIDField(unique=True) | уникальный, для публичной ссылки |
 
 * Примечание: file_path строится как f"{user.storage_path}/{stored_name}",

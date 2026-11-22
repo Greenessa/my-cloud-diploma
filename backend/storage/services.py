@@ -3,7 +3,8 @@ import os
 import uuid
 
 from django.conf import settings
-from django.core.files.storage import default_storage
+from django.http import FileResponse
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -50,3 +51,28 @@ def delete_file_from_disk(file_path):
             logger.info(f"Файл удалён с диска: {full_path}")
         except OSError as e:
             logger.error(f"Ошибка удаления файла {full_path}: {e}")
+
+
+def get_file_response(file_obj):
+    """
+    Формирует FileResponse для скачивания файла.
+    Обновляет дату последнего скачивания.
+    Возвращает FileResponse или None, если файла нет на диске.
+    """
+    full_path = os.path.join(settings.CLOUD_STORAGE_DIR, file_obj.file_path)
+    if not os.path.exists(full_path):
+        logger.error(f"Файл не найден на диске: {full_path}")
+        return None
+
+    # Обновляем дату скачивания
+    file_obj.last_downloaded_at = timezone.now()
+    file_obj.save(update_fields=["last_downloaded_at"])
+    
+    logger.info(f"Скачивание файла: {file_obj.file_name}")
+    
+    response = FileResponse(
+        open(full_path, "rb"),
+        as_attachment=True,
+        filename=file_obj.file_name,
+    )
+    return response

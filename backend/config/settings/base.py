@@ -136,6 +136,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Папка для дополнительных статических файлов проекта (если понадобится)
+STATICFILES_DIRS = [
+    # BASE_DIR / "static",  # пока не нужна — оставь закомментированной
+]
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 # Наше собственное хранилище файлов облака

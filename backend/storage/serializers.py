@@ -9,6 +9,7 @@ class FileSerializer(serializers.ModelSerializer):
     Отдаёт все нужные поля, кроме служебных путей.
     """
     owner_username = serializers.CharField(source="owner.username", read_only=True)
+    share_url = serializers.SerializerMethodField()  
 
     class Meta:
         model = File
@@ -22,6 +23,7 @@ class FileSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "last_downloaded_at",
             "share_token",
+            "share_url",  
         ]
         read_only_fields = [
             "id",
@@ -31,8 +33,15 @@ class FileSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "last_downloaded_at",
             "share_token",
+            "share_url", 
         ]
 
+    def get_share_url(self, obj):
+        """Формирует полный URL для публичного скачивания."""
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(f"/api/share/{obj.share_token}/")
+        return f"/api/share/{obj.share_token}/"
 
 class FileUploadSerializer(serializers.Serializer):
     """

@@ -53,11 +53,12 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR.parent / "frontend" / "dist",  
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -135,12 +136,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Папка для дополнительных статических файлов проекта (если понадобится)
+
 STATICFILES_DIRS = [
-    # BASE_DIR / "static",  # пока не нужна — оставь закомментированной
+    BASE_DIR.parent / "frontend" / "dist",
 ]
 
 MEDIA_URL = "/media/"

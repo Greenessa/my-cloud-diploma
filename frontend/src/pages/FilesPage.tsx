@@ -116,7 +116,7 @@ export default function FilesPage() {
                 <td>{new Date(f.uploaded_at).toLocaleString()}</td>
                 <td>
                   <a
-                    href={`http://127.0.0.1:8000/api/files/${f.id}/download/`}
+                    href={`/api/files/${f.id}/download/`}
                     target="_blank"
                     rel="noreferrer"
                     style={{ marginRight: 8 }}

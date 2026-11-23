@@ -19,7 +19,7 @@ export type User = {
   
   const initialState: AuthState = {
     user: null,
-    isLoading: false,
+    isLoading: true,
     error: null,
   };
 
